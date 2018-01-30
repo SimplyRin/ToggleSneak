@@ -2,10 +2,13 @@ package deez.togglesneak;
 
 import java.text.DecimalFormat;
 
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.config.Configuration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.util.MovementInputFromOptions;
+import net.simplyrin.config.Config;
 
 /*
  *		ToggleSneak's replacement for MovementInputFromOptions
@@ -14,16 +17,16 @@ public class CustomMovementInput
 {
 	public boolean isDisabled;
 	public boolean canDoubleTap;
-	
+
 	public boolean sprint = false;
 	public boolean sprintHeldAndReleased = false;
 	public boolean sprintDoubleTapped = false;
-	
+
 	private long lastPressed;
 	private long lastSprintPressed;
 	private boolean handledSneakPress;
 	private boolean handledSprintPress;
-	private boolean wasRiding;	
+	private boolean wasRiding;
 
 	/*
 	 * 		MovementInputFromOptions.updatePlayerMoveState()
@@ -60,7 +63,7 @@ public class CustomMovementInput
 		//
 		// Sneak Toggle - Essentially the same as old ToggleSneak
 		//
-		
+
 		// Check to see if Enabled - Added 6/17/14 to provide option to disable Sneak Toggle
 		if (ToggleSneakMod.optionToggleSneak)
 		{
@@ -77,11 +80,11 @@ public class CustomMovementInput
 	        	{
 	        		options.sneak = !options.sneak;
 	        	}
-	        	
+
 	        	this.lastPressed = System.currentTimeMillis();
 	        	this.handledSneakPress = true;
 	        }
-			
+
 			// Key Released
 	        if (!settings.keyBindSneak.isKeyDown() && this.handledSneakPress)
 	        {
@@ -96,7 +99,7 @@ public class CustomMovementInput
 	        	{
 	        		options.sneak = false;
 	        	}
-	        	
+
 	        	this.handledSneakPress = false;
 	        }
 		}
@@ -110,18 +113,18 @@ public class CustomMovementInput
 			options.moveStrafe = (float)((double)options.moveStrafe * 0.3D);
 			options.moveForward = (float)((double)options.moveForward * 0.3D);
 		}
-		
+
 		//
 		//  Sprint Toggle - Updated 6/18/2014
 		//
-		
+
 		// Establish conditions where we don't want to start a sprint - sneaking, riding, flying, hungry
 		boolean enoughHunger = (float)thisPlayer.getFoodStats().getFoodLevel() > 6.0F || thisPlayer.capabilities.isFlying;
 		boolean canSprint = !options.sneak && !thisPlayer.isRiding() && !thisPlayer.capabilities.isFlying && enoughHunger;
-		
+
 		isDisabled = !ToggleSneakMod.optionToggleSprint;
 		canDoubleTap = ToggleSneakMod.optionDoubleTap;
-		
+
 		// Key Pressed
 		if((canSprint || isDisabled) && settings.keyBindSprint.isKeyDown() && !this.handledSprintPress)
 		{
@@ -133,7 +136,7 @@ public class CustomMovementInput
 				this.sprintHeldAndReleased = false;
 			}
 		}
-		
+
 		// Key Released
 		if((canSprint || isDisabled) && !settings.keyBindSprint.isKeyDown() && this.handledSprintPress)
 		{
@@ -144,16 +147,16 @@ public class CustomMovementInput
 			}
 			this.handledSprintPress = false;
 		}
-		
+
 		UpdateStatus(options, thisPlayer, settings);
 	}
-	
+
 	public void UpdateSprint(boolean newValue, boolean doubleTapped)
 	{
 		this.sprint = newValue;
 		this.sprintDoubleTapped = doubleTapped;
 	}
-	
+
 	//
 	//  Detect any changes in movement state and update HUD - Added 4/14/2014
 	//
@@ -162,40 +165,89 @@ public class CustomMovementInput
 		if(ToggleSneakMod.optionShowHUDText)
 		{
 			String output = "";
-			
+
 			boolean isFlying = thisPlayer.capabilities.isFlying;
 			boolean isRiding = thisPlayer.isRiding();
 			boolean isHoldingSneak = settings.keyBindSneak.isKeyDown();
 			boolean isHoldingSprint = settings.keyBindSprint.isKeyDown();
-			
-			if(isFlying)
-			{
-				DecimalFormat numFormat = new DecimalFormat("#.00");
-				if (ToggleSneakMod.optionEnableFlyBoost && isHoldingSprint) output += "[Flying (" + numFormat.format(ToggleSneakMod.optionFlyBoostAmount) + "x boost)]  ";
-				else output += "[Flying]  ";
-			}
-			if(isRiding)	output += "[Riding]  ";
-			
-			if (options.sneak)
-			{
-				if(isFlying)			output += "[Descending]  ";
-				else if(isRiding)		output += "[Dismounting]  ";
-				else if(isHoldingSneak)	output += "[Sneaking (Key Held)]  ";
-				else					output += "[Sneaking (Toggled)]  ";
-			}
-			else if (this.sprint)
-			{
-				if(!isFlying && !isRiding)
+
+			if(ToggleSneakMod.getTSModInstance().isEnabled()) {
+				Configuration config = Config.getConfig("mods/ToggleSneakMod/config.yml");
+
+				if(isFlying)
 				{
-					//  Detect Vanilla conditions - ToggleSprint disabled, DoubleTapped and Hold & Release
-					boolean isVanilla = this.sprintHeldAndReleased || isDisabled || this.sprintDoubleTapped;
-					
-					if(isHoldingSprint)		output += "[Sprinting (Key Held)]";
-					else if(isVanilla)		output += "[Sprinting (Vanilla)]";
-					else					output += "[Sprinting (Toggled)]";
+					DecimalFormat numFormat = new DecimalFormat("#.00");
+					if ((ToggleSneakMod.optionEnableFlyBoost) && (isHoldingSprint)) {
+						output += config.getString("Flying.Boost").replace("%BOOST%", numFormat.format(ToggleSneakMod.optionFlyBoostAmount)) + "  ";
+					} else {
+						output += config.getString("Flying.Flying") + "  ";
+					}
 				}
+
+				if (isRiding) {
+					output += config.getString("Riding") + "  ";
+				}
+
+				if (options.sneak)
+				{
+					if (isFlying) {
+						output += config.getString("Descending") + "  ";
+					} else if (isRiding) {
+						output += config.getString("Dismounting") + "  ";
+					} else if (isHoldingSneak) {
+						output += config.getString("Sneaking.Key_Held") + "  ";
+					} else {
+						output += config.getString("Sneaking.Toggled") + "  ";
+					}
+				}
+				else if (this.sprint)
+				{
+					if(!isFlying && !isRiding)
+					{
+						//  Detect Vanilla conditions - ToggleSprint disabled, DoubleTapped and Hold & Release
+						boolean isVanilla = this.sprintHeldAndReleased || isDisabled || this.sprintDoubleTapped;
+
+						if (isHoldingSprint) {
+							output += config.getString("Sprinting.Key_Held");
+						} else if (isVanilla) {
+							output += config.getString("Sprinting.Vanilla");
+						} else {
+							output += config.getString("Sprinting.Toggled");
+						}
+					}
+				}
+				RenderTextToHUD.SetHUDText(ChatColor.translateAlternateColorCodes('&', output));
+			} else {
+				if(isFlying)
+				{
+					DecimalFormat numFormat = new DecimalFormat("#.00");
+					if (ToggleSneakMod.optionEnableFlyBoost && isHoldingSprint) output += "[Flying (" + numFormat.format(ToggleSneakMod.optionFlyBoostAmount) + "x boost)]  ";
+					else output += "[Flying]  ";
+				}
+				if(isRiding)	output += "[Riding]  ";
+
+				if (options.sneak)
+				{
+					if(isFlying)			output += "[Descending]  ";
+					else if(isRiding)		output += "[Dismounting]  ";
+					else if(isHoldingSneak)	output += "[Sneaking (Key Held)]  ";
+					else					output += "[Sneaking (Toggled)]  ";
+				}
+				else if (this.sprint)
+				{
+					if(!isFlying && !isRiding)
+					{
+						//  Detect Vanilla conditions - ToggleSprint disabled, DoubleTapped and Hold & Release
+						boolean isVanilla = this.sprintHeldAndReleased || isDisabled || this.sprintDoubleTapped;
+
+						if(isHoldingSprint)		output += "[Sprinting (Key Held)]";
+						else if(isVanilla)		output += "[Sprinting (Vanilla)]";
+						else					output += "[Sprinting (Toggled)]";
+					}
+				}
+				RenderTextToHUD.SetHUDText(output);
 			}
-			RenderTextToHUD.SetHUDText(output);
+
 		}
 	}
 }
